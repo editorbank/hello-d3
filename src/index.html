@@ -3,11 +3,23 @@
     <head>
         <meta charset="utf-8" />
         <title>Hello chart!</title>
-    </head>
+        <meta charset="utf-8">
+        <style>
+        
+        .bar {
+          fill: steelblue;
+        }
+        
+        .bar:hover {
+          fill: brown;
+        }
+        
+        .axis--x path {
+          display: none;
+        }
+        
+        </style></head>
     <body>
-        <h1>Hello chart!</h1>
-        <p id=messageTop >...</p>
-        <canvas id=myChart  width="60" height="40" style="border: 1px solid gray;" ></canvas>
-        <p id=messageBottom >...</p>
+        <svg id=myChart width="640" height="480" style="border: 0pt solid #eee;"></svg>
     </body>
 </html>

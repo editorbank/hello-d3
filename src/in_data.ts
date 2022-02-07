@@ -1,22 +1,30 @@
+export type HTMLColor = string | CanvasGradient | CanvasPattern; 
 
-export type InData = {
-  color :string;
-  Xs :string[];
-  labelY ?:string;
-  Ys :number[];
-  maxY :number;
-  maxColor :string;
-  maxLabelLen ?:number|0;
+export interface InData {
+  color :'steelblue' | HTMLColor ;
+  labels :string[];
+  title ?:string;
+  values :number[];
+  overValue :number;
+  overColor :'red' | HTMLColor;
+  overLineColor :'red' | HTMLColor;
+  maxLabelLen?: 0 | number;
+  verticalGridColor?: HTMLColor;
+  fontName?: string;  
+  fontSize?: number;
+  fontColor?: HTMLColor;
 }
 
 var in_data :InData = {
-  color: 'rgba(0, 255, 0, 0.6)',
-  Xs: [ "США", "Индонезия (Очень длинное название)", "Китай", "Индия", "Бразилия", "Пакистан", "Нигерия", "Бангладеш", "Россия", "Япония"],
-  labelY: 'Население',
-  Ys: [326625791, 260580739, 1379302771, 1281935911, 207353391, 204924861, 190632261, 157826578, 142257519, 126451398],
-  maxY: 400000000,
-  maxColor: 'rgba(255, 0, 0, 0.6)',
+  color: 'steelblue',
+  labels: [ "США", "Индонезия (Очень длинное название)", "Китай", "Индия", "Бразилия", "Пакистан", "Нигерия", "Бангладеш", "Россия", "Япония"],
+  title: 'Население',
+  values: [326625791, 260580739, 1379302771, 1281935911, 207353391, 204924861, 190632261, 157826578, 142257519, 126451398],
+  overValue: 400000000,
+  overColor: 'brown',
+  overLineColor: 'red',
   maxLabelLen: 15,
+  verticalGridColor: 'lightgray',
 }
 
 export default in_data;
