@@ -27,4 +27,4 @@ or run:
 ```
 npm run serve
 ```
-and open [](http://localhost:8080/)
+and open [http://localhost:8080/](http://localhost:8080/)
