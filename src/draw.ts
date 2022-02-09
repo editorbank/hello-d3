@@ -1,11 +1,13 @@
 import { InData } from "./in_data";
 import * as d3 from "d3";
 
-export function crop_string(s :string, maxLen :number = 0) :string {
-  if(s.length > maxLen && maxLen !== 0)
-    return s.substring(0,maxLen) + '...'
-  else
+export function truncate_str(s :string, maxLen :number = 0) :string {
+  if(s.length > maxLen && maxLen !== 0){
+    var end = '…';
+    return s.substring(0,maxLen - end.length) + end;
+  } else {
     return s;
+  }
 }
 
 export function draw(elementSelector :string, in_data :InData){
@@ -14,28 +16,36 @@ export function draw(elementSelector :string, in_data :InData){
   width = +svg.attr("width") - margin.left - margin.right,
   height = +svg.attr("height") - margin.top - margin.bottom;
 
+  in_data.labels = in_data.labels.map( s => truncate_str(s,10));
   var x = d3.scaleBand().rangeRound([0, width]).padding(0.1);
-  var y = d3.scaleLinear().rangeRound([height, 0]);
+  x.domain(in_data.labels);
 
+  var maxY = d3.max(in_data.values/*, d=>d*/); 
+  var y = d3.scaleLinear()
+    .rangeRound([height, 0])
+    .domain([0, maxY ])
+  ;
+  
   var g = svg.append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
   ;
 
-  in_data.labels = in_data.labels.map( s => crop_string(s,10));
-  x.domain(in_data.labels);
-  var maxValue = d3.max(in_data.values/*, d=>d*/); 
-  y.domain([0, maxValue ]);
+  if (in_data.overValue || in_data.overValue === 0)
+    svg.append("path")
+      .attr("d","M0,0l"+width+",0")
+      .attr('stroke','red')
+      .attr('stroke-width','.5')
+      .attr('stroke-dasharray','10,5')
+      .attr('transform', `translate(${margin.left},${margin.top+y(in_data.overValue)})`)
+  ;
 
   g.append("g")
     .attr("class", "axis axis--x")
     .attr("transform", "translate(0," + height + ")")
     .call(d3.axisBottom(x))
-     .selectAll("text")
-     .attr("transform", "translate(-20,0)rotate(-45)")
-    //  .style("alignment-baseline", "after-edge")
-    .style("alignment-baseline", "central")
-    // .style("alignment-baseline", "middle")
-    // .style("alignment-baseline", "before-edge")
+    .selectAll("text")
+    .attr("transform", "rotate(-45)")
+    .style("alignment-baseline", "baseline")
     .style("text-anchor", "end")
     .style("font-size", '16px')
     .style("fill", "black")
