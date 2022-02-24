@@ -1,7 +1,9 @@
 import { draw } from "./draw";
-import in_data from "./in_data";
+import wiget from "./in_data";
 
 
 if(window) window.onload = () => {
-  draw('#myChart', in_data);
+  // var rootElement = document.body ;
+  var rootElement = document.getElementById('myChart') ;
+  draw( rootElement, wiget);
 }
