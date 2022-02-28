@@ -15,6 +15,9 @@
   "license": "ISC",
   "devDependencies": {
     "@types/d3": "^7.1.0",
+    "@types/d3-array": "^3.0.2",
+    "@types/d3-sankey": "^0.11.2",
+    "@types/d3-shape": "^3.0.2",
     "@webpack-cli/generators": "^2.4.2",
     "html-webpack-plugin": "^5.5.0",
     "http-server": "^14.1.0",
@@ -25,6 +28,9 @@
     "webpack-dev-server": "^4.7.4"
   },
   "dependencies": {
-    "d3": "^7.3.0"
+    "d3": "^7.3.0",
+    "d3-array": "^3.1.1",
+    "d3-sankey": "^0.12.3",
+    "d3-shape": "^3.1.0"
   }
 }

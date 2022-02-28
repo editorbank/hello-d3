@@ -1,7 +1,7 @@
 import { DataItem } from './polymatica/data';
 import { DataSettings, SingleData, ViewSettings, Widget } from './polymatica/widget';
 
-declare class SamplePolymaticaWidget extends Widget implements SingleData {
+export declare class SamplePolymaticaWidget extends Widget implements SingleData {
     data: DataItem[];
     dataSettings: DataSettings;
     onChange(): void;
