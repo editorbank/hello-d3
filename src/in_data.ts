@@ -10,6 +10,28 @@ export declare class SamplePolymaticaWidget extends Widget implements SingleData
 
 var samplePolymaticaWidget = {
     data: [
+        // {
+        //     "col_0": "Конец",
+        //     "col_1": "Начало",
+        //     "col_2": 1
+        // },
+        {
+            "col_0": "Начало",
+            "col_1": "Конец",
+            "col_2": 1
+        },
+
+
+        {
+            "col_0": "Зелёный",
+            "col_1": "Конец",
+            "col_2": 1
+        },
+        {
+            "col_0": "Начало",
+            "col_1": "Конец",
+            "col_2": 3
+        },
         {
             "col_0": "Начало",
             "col_1": "Красный",
@@ -27,18 +49,8 @@ var samplePolymaticaWidget = {
         },
         {
             "col_0": "Начало",
-            "col_1": "Конец",
-            "col_2": 3
-        },
-        {
-            "col_0": "Начало",
             "col_1": "Зелёный",
             "col_2": 2
-        },
-        {
-            "col_0": "Зелёный",
-            "col_1": "Конец",
-            "col_2": 1
         },
         {
             "col_0": "Зелёный",
