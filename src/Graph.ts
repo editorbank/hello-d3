@@ -2,90 +2,97 @@ export type NodeId = string | number;
 export type LinkId = string | number;
 
 export interface INode {
-  id:NodeId;
   in: Link[];
   out: Link[];
   isEmpty(): boolean;
+  key: NodeId;
 }
-export interface IFlow {
-  width: number;
-}
+// export interface IFlow {
+//   width: number;
+// }
 export interface ILink {
   from: INode;
   to: INode;
-  flow: IFlow;
-}
-
-export interface INodes {
-  [index: NodeId]: INode;
-}
-
-export interface ILinks {
-  [index: LinkId]: ILink[];
+  key: LinkId;
 }
 
 export class Node implements INode {
-  id: NodeId;
-  in: Link[] = [];
-  out: Link[] = [];
+  in = new Array<Link>();
+  out = new Array<Link>();
+  key: NodeId;
 
-  constructor(id:NodeId) {
-    this.id=id;
+  constructor(key: NodeId) {
+    this.key = key;
   }
   isEmpty(): boolean {
     return this.in.length === 0 && this.out.length === 0
   }
-  static mkIndex(key: string | number): NodeId {
+  static key(key: string | number): NodeId {
     return `${key}`
   }
 
 }
 
 export class Link implements ILink {
-  name?: string;
   from: INode;
   to: INode;
-  flow: IFlow;
+  key: LinkId;
 
-  constructor(from: INode, to: INode, flow: IFlow) {
+  constructor(from: INode, to: INode) {
     this.from = from;
     this.to = to;
-    this.flow = flow;
+    this.key = Link.key(this.from.key, this.to.key)
+
   }
 
-  static mkIndex(fromKey: NodeId, toKey: NodeId): LinkId {
-    return `${Node.mkIndex(fromKey)}->${Node.mkIndex(toKey)}`
+  static key(fromKey: NodeId, toKey: NodeId): LinkId {
+    return `${Node.key(fromKey)}->${Node.key(toKey)}`
   }
 }
 
-export class Graph {
-  nodes: INodes = {};
-  links: ILinks = {};
-  isExistNode(nodeKey: NodeId):boolean{
-    return !!this.nodes[nodeKey]
-  }
-  getOrCreateNodeById(nodeId: NodeId):Node{
-    if(!this.isExistNode(nodeId)) this.nodes[nodeId] = new Node(nodeId);
-    return this.nodes[nodeId];
-  }
-  isExistLink(linkKey: LinkId):boolean{
-    return !!this.links[linkKey]
+export class GraphBase {
+  nodes = new Map<NodeId, Node>();
+  links = new Map<LinkId, Link>();
+
+  addNode(nodeKey: NodeId): Node {
+    var ret_node;
+    if (!this.nodes.has(nodeKey)) {
+      ret_node = new Node(nodeKey);
+      this.nodes.set(nodeKey, ret_node);
+    } else {
+      ret_node = this.nodes.get(nodeKey);
+    }
+    return ret_node;
   }
 
-  addLink(fromKey: NodeId, toKey: NodeId, flow?:IFlow): void {
-    var from_node = this.getOrCreateNodeById(fromKey);
-    var to_node = this.getOrCreateNodeById(toKey);
-    var linkKey = Link.mkIndex(fromKey, toKey);
-    var new_link = new Link(from_node, to_node, flow);
-    from_node.out.push(new_link)
-    to_node.in.push(new_link)
-    // Nodes add
-    // this.nodes[fromKey] = from_node;
-    // this.nodes[toKey] = to_node;
-    // Link add
-    if (!this.isExistLink(linkKey)) {
-      this.links[linkKey]=[];
+  addLink(fromKey: NodeId, toKey: NodeId): Link {
+    var retLink;
+    const fromNode = this.addNode(fromKey);
+    const toNode = this.addNode(toKey);
+
+    const linkKey = Link.key(fromKey, toKey);
+    if (!this.links.has(linkKey)) {
+      retLink = new Link(fromNode, toNode);
+      this.links.set(linkKey, retLink);
+      fromNode.out.push(retLink)
+      toNode.in.push(retLink)
+    } else {
+      retLink = this.links.get(linkKey)
     }
-    this.links[linkKey].push(new_link);
+    return retLink;
+  }
+}
+
+export class GraphFlow<IFlow> extends GraphBase {
+  flows = new Map<LinkId, IFlow[]>()
+  override addLink(fromKey: NodeId, toKey: NodeId, flow?: IFlow): Link {
+    const retLink = super.addLink(fromKey, toKey);
+    const linkKey = retLink.key;
+    if (this.flows.has(linkKey)) {
+      this.flows.get(linkKey).push(flow);
+    } else {
+      this.flows.set(linkKey, [flow]);
+    }
+    return retLink;
   }
 }

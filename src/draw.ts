@@ -1,7 +1,7 @@
 import { Range } from './Range';
 import { 
   Node,
-  Graph,
+  GraphFlow,
 } from './Graph';
 
 import "./in_data";
@@ -17,6 +17,9 @@ function getDataValue(wiget: SamplePolymaticaWidget, rowIndex: number, blockName
   return wiget.data[rowIndex][getDataColumNameByBlock(wiget, blockName, blockCol)]
 }
 
+export interface IFlow2 {
+  width: number;
+}
 
 export function draw(
   root: HTMLElement, 
@@ -42,10 +45,10 @@ export function draw(
   var flowFieldName = getDataColumNameByBlock(wiget, 'FLOW')
 
   var rangeX=new Range();
-  var graph = new Graph();
+  var graph = new GraphFlow<IFlow2>();
   for(var row in wiget.data){
-    var fromKey = Node.mkIndex(wiget.data[row][fromFieldName]);
-    var toKey = Node.mkIndex(wiget.data[row][toFieldName]);
+    var fromKey = Node.key(wiget.data[row][fromFieldName]);
+    var toKey = Node.key(wiget.data[row][toFieldName]);
     var flow = wiget.data[row][flowFieldName] || 1;
     console.log(row+" "+fromKey+"---"+flow+"--->"+toKey);
     graph.addLink(fromKey,toKey,{width: flow})
@@ -53,6 +56,7 @@ export function draw(
   }
   console.log((graph.nodes));
   console.log((graph.links));
+  console.log((graph.flows));
   console.log((''+rangeX));
   
   
