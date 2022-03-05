@@ -1,6 +1,8 @@
 import { Range } from './Range';
 import {
   SankeyGraph,
+  SankeyNode,
+  SankeyLink,
 } from './SankeyGraph';
 import {
   Node,
@@ -44,7 +46,7 @@ export function draw(
   const toFieldName = getDataColumNameByBlock(wiget, 'TO')
   const flowFieldName = getDataColumNameByBlock(wiget, 'FLOW')
 
-  const rangeX = new Range();
+  
   const graph = new SankeyGraph();
   wiget.data.forEach((row) => {
     const fromKey = Node.key(row[fromFieldName]);
@@ -56,72 +58,57 @@ export function draw(
   });
 
 
-  // Первый проход по всем узлам
 
-  const levelNodes = new Map<NodeKey, number>();
-  var currentLevel = 0; // текущий уровень узлов
-  var isChanged = false; // флаг. Были изменения, нужен ещё один проход
-  var minLinks: number = undefined; // Минимальное количество входящих связей в узлы 
-  var starts = new Map<NodeKey, Node>(); // Стартовые узлы
-  var ends = new Map<NodeKey, Node>(); // конечные узлы
-  graph.nodes.forEach((node) => {
+  var currLevelX = 0; // текущий уровень узлов по X
+  var currLevelY = 0; // текущий уровень узлов по Y
+  const starts = new Array<SankeyNode>(); // Стартовые узлы
+  const ends = new Array<SankeyNode>(); // конечные узлы
+  var nexts = new Array<SankeyNode>(); // узлы для дальнейшей обработки
+  // Первый проход по всем узлам
+  graph.nodes.forEach(node => {
 
     // отбор начальных узлов
     if (node.in.length === 0) {
-      starts.set(node.key, node);
-      if (!levelNodes.has(node.key)) {
-        levelNodes.set(node.key, currentLevel);
-        isChanged = true;
-      }
+      starts.push(node);
+      node.levelX = currLevelX;
+      node.levelY = currLevelY++;
+      node.out.forEach(link => nexts.push(graph.asNode(link.to)));
     }
 
     // Отбор конечных узлов
     if (node.out.length === 0) {
-      ends.set(node.key, node);
+      ends.push(node);
     }
 
-    if ('undefined' == typeof (minLinks) || minLinks > node.in.length) minLinks = node.in.length;
-
   });
-  console.log(`minLinks=${minLinks} isChanged=${isChanged}`);
 
-
-  /* Поиск узлов с минимальным количеством входящих связей
-  graph.nodes.forEach((node) => {
-    if (node.in.length === minLinks) {
-      if (!levelNodes.has(node.key)) {
-        levelNodes.set(node.key, currentLevel);
-        isChanged = true;
-      }
-    }
-  });
-  //*/
-  var maxLevel = currentLevel;
-  while (isChanged && currentLevel < 10000) { // TODO убрать ограничение зацикливания 
-    isChanged = false;
-    graph.nodes.forEach(node => {
-      if (levelNodes.has(node.key) && levelNodes.get(node.key) === currentLevel) {
-        node.out.forEach((link) => {
-          maxLevel = currentLevel + 1;
-          levelNodes.set(link.to.key, maxLevel);
-          isChanged = true;
-        })
-      }
+  const rangeY = new Range().add(0);
+  while (nexts.length) {
+    const current = nexts; // узлы для текущей обработки
+    nexts = new Array<SankeyNode>(); // узлы для дальнейшей обработки
+    currLevelX++;
+    currLevelY=0;
+    current.forEach(node => {
+      rangeY.add(currLevelY);
+      node.levelX = currLevelX;
+      node.levelY = currLevelY++;
+      node.out.forEach(link => nexts.push(graph.asNode(link.to)));
     })
-    currentLevel++;
   };
+  const rangeX = new Range().add(0).add(currLevelX);
 
-  console.log(`maxLevel=${maxLevel}`);
+  //console.log(`maxLevel=${maxLevel}`);
   // У становка для всех конечных узлов максимального уровня
   ends.forEach(node => {
-    levelNodes.set(node.key, maxLevel);
+    node.levelX = currLevelX
   })
 
-  // console.log((graph.nodes));
+  graph.nodes.forEach(n => console.log(`-${n.key} X=${n.levelX} Y=${n.levelY}`));
+
+  console.log((graph.nodes));
   // console.log((graph.links));
   // console.log((graph.flows));
-  console.log((levelNodes));
-  console.log(('' + rangeX));
+  console.log((`rangeX=${rangeX} rangeY=${rangeY}`));
 
 
 

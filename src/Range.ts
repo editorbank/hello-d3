@@ -2,7 +2,7 @@ export interface IRange {
     min?:any;
     max?:any;
     isEmpty():boolean;
-    expand(val:any):Range;
+    add(val:any):Range;
 }
 
 export class Range implements IRange {
@@ -13,7 +13,7 @@ export class Range implements IRange {
       return 'undefined'===typeof(this.max) || 'undefined'===typeof(this.min);
     }
 
-    expand(val:any):Range{
+    add(val:any):Range{
       if(this.isEmpty()){
         this.min=val;
         this.max=val;

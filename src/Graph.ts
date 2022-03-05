@@ -1,22 +1,22 @@
 export type NodeKey = string | number;
 export type LinkKey = string | number;
 
-export interface INode {
-  in: Link[];
-  out: Link[];
-  isEmpty(): boolean;
-  key: NodeKey;
-}
+// export interface INode {
+//   in: Link[];
+//   out: Link[];
+//   isEmpty(): boolean;
+//   key: NodeKey;
+// }
 
-export interface ILink {
-  from: INode;
-  to: INode;
-  key: LinkKey;
-}
+// export interface ILink {
+//   from: INode;
+//   to: INode;
+//   key: LinkKey;
+// }
 
-export class Node implements INode {
-  in = new Array<Link>();
-  out = new Array<Link>();
+export class Node /*implements INode*/ {
+  in = new Array<Link<Node>>();
+  out = new Array<Link<Node>>();
   key: NodeKey;
 
   constructor(key: NodeKey) {
@@ -31,12 +31,12 @@ export class Node implements INode {
 
 }
 
-export class Link implements ILink {
-  from: INode;
-  to: INode;
+export class Link<extNode extends Node> {
+  from: extNode;
+  to: extNode;
   key: LinkKey;
 
-  constructor(from: INode, to: INode) {
+  constructor(from: extNode, to: extNode) {
     this.from = from;
     this.to = to;
     this.key = Link.key(this.from.key, this.to.key)
@@ -48,40 +48,48 @@ export class Link implements ILink {
   }
 }
 
-export class Graph<extNode extends Node, extLink extends Link> {
-  nodes = new Map<NodeKey, extNode>();
-  links = new Map<LinkKey, extLink>();
+export class Graph<extNode extends Node, extLink extends Link<extNode>> {
+  _nodes = new Map<NodeKey, extNode>();
+  _links = new Map<LinkKey, extLink>();
+  
+  get nodes():Map<NodeKey, extNode>{return this._nodes};
+  get links():Map<LinkKey, extLink>{return this._links};
+
+  asNode(node:any):extNode{return node}
+  asLink(node:any):extLink{return node}
 
   newNode(nodeKey: NodeKey): extNode {
     return new Node(nodeKey) as any;
   }
 
-  addNode(nodeKey: NodeKey): extNode {
-    var ret_node: extNode;
-    if (!this.nodes.has(nodeKey)) {
-      ret_node = this.newNode(nodeKey);
-      this.nodes.set(nodeKey, ret_node);
-    } else {
-      ret_node = this.nodes.get(nodeKey);
-    }
-    return ret_node;
-  }
   newLink(fromNode: extNode, toNode: extNode): extLink {
-    return new Link(fromNode, toNode) as any
+    return new Link<Node>(fromNode, toNode) as any
   }
+
+  addNode(nodeKey: NodeKey): extNode {
+    var retNode: extNode;
+    if (!this._nodes.has(nodeKey)) {
+      retNode = this.newNode(nodeKey);
+      this._nodes.set(nodeKey, retNode);
+    } else {
+      retNode = this._nodes.get(nodeKey);
+    }
+    return retNode;
+  }
+
   addLink(fromKey: NodeKey, toKey: NodeKey): extLink {
     var retLink: extLink;
     const fromNode = this.addNode(fromKey);
     const toNode = this.addNode(toKey);
 
     const linkKey = Link.key(fromKey, toKey);
-    if (!this.links.has(linkKey)) {
-      retLink = this.newLink(fromNode, toNode);
-      this.links.set(linkKey, retLink);
+    if (!this._links.has(linkKey)) {
+      retLink = this.newLink(fromNode, toNode) as extLink;
+      this._links.set(linkKey, retLink);
       fromNode.out.push(retLink);
       toNode.in.push(retLink);
     } else {
-      retLink = this.links.get(linkKey)
+      retLink = this._links.get(linkKey)
     }
     return retLink;
   }

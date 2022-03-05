@@ -1,15 +1,20 @@
-import { Node, Link, Graph, NodeKey } from "./Graph";
+import { Node, Link, Graph, NodeKey, LinkKey } from "./Graph";
 
-export interface SankeyNode extends Node {
-  xLevel: number;
+export class SankeyNode extends Node {
+  levelX: number;
+  levelY: number;
 }
 
-export interface SankeyLink extends Link {
+export class SankeyLink extends Link<SankeyNode> {
   flows: number[];
 }
 
 
 export class SankeyGraph extends Graph<SankeyNode, SankeyLink> {
+  override newNode(nodeKey: NodeKey): SankeyNode {
+    const node = super.newNode(nodeKey);
+    return node;
+  }
   override addLink(fromKey: NodeKey, toKey: NodeKey, flow?: number): SankeyLink {
     const retLink = super.addLink(fromKey, toKey);
     if (retLink.flows) {
