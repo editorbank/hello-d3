@@ -1,33 +1,31 @@
-export type NodeId = string | number;
-export type LinkId = string | number;
+export type NodeKey = string | number;
+export type LinkKey = string | number;
 
 export interface INode {
   in: Link[];
   out: Link[];
   isEmpty(): boolean;
-  key: NodeId;
+  key: NodeKey;
 }
-// export interface IFlow {
-//   width: number;
-// }
+
 export interface ILink {
   from: INode;
   to: INode;
-  key: LinkId;
+  key: LinkKey;
 }
 
 export class Node implements INode {
   in = new Array<Link>();
   out = new Array<Link>();
-  key: NodeId;
+  key: NodeKey;
 
-  constructor(key: NodeId) {
+  constructor(key: NodeKey) {
     this.key = key;
   }
   isEmpty(): boolean {
     return this.in.length === 0 && this.out.length === 0
   }
-  static key(key: string | number): NodeId {
+  static key(key: string | number): NodeKey {
     return `${key}`
   }
 
@@ -36,7 +34,7 @@ export class Node implements INode {
 export class Link implements ILink {
   from: INode;
   to: INode;
-  key: LinkId;
+  key: LinkKey;
 
   constructor(from: INode, to: INode) {
     this.from = from;
@@ -45,53 +43,45 @@ export class Link implements ILink {
 
   }
 
-  static key(fromKey: NodeId, toKey: NodeId): LinkId {
+  static key(fromKey: NodeKey, toKey: NodeKey): LinkKey {
     return `${Node.key(fromKey)}->${Node.key(toKey)}`
   }
 }
 
-export class GraphBase {
-  nodes = new Map<NodeId, Node>();
-  links = new Map<LinkId, Link>();
+export class Graph<extNode extends Node, extLink extends Link> {
+  nodes = new Map<NodeKey, extNode>();
+  links = new Map<LinkKey, extLink>();
 
-  addNode(nodeKey: NodeId): Node {
-    var ret_node;
+  newNode(nodeKey: NodeKey): extNode {
+    return new Node(nodeKey) as any;
+  }
+
+  addNode(nodeKey: NodeKey): extNode {
+    var ret_node: extNode;
     if (!this.nodes.has(nodeKey)) {
-      ret_node = new Node(nodeKey);
+      ret_node = this.newNode(nodeKey);
       this.nodes.set(nodeKey, ret_node);
     } else {
       ret_node = this.nodes.get(nodeKey);
     }
     return ret_node;
   }
-
-  addLink(fromKey: NodeId, toKey: NodeId): Link {
-    var retLink;
+  newLink(fromNode: extNode, toNode: extNode): extLink {
+    return new Link(fromNode, toNode) as any
+  }
+  addLink(fromKey: NodeKey, toKey: NodeKey): extLink {
+    var retLink: extLink;
     const fromNode = this.addNode(fromKey);
     const toNode = this.addNode(toKey);
 
     const linkKey = Link.key(fromKey, toKey);
     if (!this.links.has(linkKey)) {
-      retLink = new Link(fromNode, toNode);
+      retLink = this.newLink(fromNode, toNode);
       this.links.set(linkKey, retLink);
-      fromNode.out.push(retLink)
-      toNode.in.push(retLink)
+      fromNode.out.push(retLink);
+      toNode.in.push(retLink);
     } else {
       retLink = this.links.get(linkKey)
-    }
-    return retLink;
-  }
-}
-
-export class GraphFlow<IFlow> extends GraphBase {
-  flows = new Map<LinkId, IFlow[]>()
-  override addLink(fromKey: NodeId, toKey: NodeId, flow?: IFlow): Link {
-    const retLink = super.addLink(fromKey, toKey);
-    const linkKey = retLink.key;
-    if (this.flows.has(linkKey)) {
-      this.flows.get(linkKey).push(flow);
-    } else {
-      this.flows.set(linkKey, [flow]);
     }
     return retLink;
   }
