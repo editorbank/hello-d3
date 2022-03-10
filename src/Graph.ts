@@ -50,20 +50,20 @@ export class Link<extNode extends Node> {
 
 export class Graph<extNode extends Node, extLink extends Link<extNode>> {
   _nodes = new Map<NodeKey, extNode>();
-  _links = new Map<LinkKey, extLink>();
-  
-  get nodes():Map<NodeKey, extNode>{return this._nodes};
-  get links():Map<LinkKey, extLink>{return this._links};
+  _links = new Array<extLink>();
 
-  asNode(node:any):extNode{return node}
-  asLink(node:any):extLink{return node}
+  get nodes(): Map<NodeKey, extNode> { return this._nodes };
+  get links(): Array<extLink> { return this._links };
+
+  asNode(node: any): extNode { return node }
+  asLink(node: any): extLink { return node }
 
   newNode(nodeKey: NodeKey): extNode {
     return new Node(nodeKey) as any;
   }
 
   newLink(fromNode: extNode, toNode: extNode): extLink {
-    return new Link<Node>(fromNode, toNode) as any
+    return new Link<extNode>(fromNode, toNode) as any
   }
 
   addNode(nodeKey: NodeKey): extNode {
@@ -81,16 +81,12 @@ export class Graph<extNode extends Node, extLink extends Link<extNode>> {
     var retLink: extLink;
     const fromNode = this.addNode(fromKey);
     const toNode = this.addNode(toKey);
-
-    const linkKey = Link.key(fromKey, toKey);
-    if (!this._links.has(linkKey)) {
-      retLink = this.newLink(fromNode, toNode) as extLink;
-      this._links.set(linkKey, retLink);
-      fromNode.out.push(retLink);
-      toNode.in.push(retLink);
-    } else {
-      retLink = this._links.get(linkKey)
-    }
+    const linkKey = this._links.length;
+    retLink = this.newLink(fromNode, toNode) as extLink;
+    retLink.key = linkKey;
+    this._links.push(retLink);
+    fromNode.out.push(retLink);
+    toNode.in.push(retLink);
     return retLink;
   }
 }

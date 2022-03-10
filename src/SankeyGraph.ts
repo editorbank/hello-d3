@@ -3,12 +3,14 @@ import { Node, Link, Graph, NodeKey, LinkKey } from "./Graph";
 export class SankeyNode extends Node {
   levelX: number;
   levelY: number;
+  flow: number;
 }
 
 export class SankeyLink extends Link<SankeyNode> {
-  flows: number[];
+  fromLevelY: number;
+  toLevelY: number;
+  flow: number;
 }
-
 
 export class SankeyGraph extends Graph<SankeyNode, SankeyLink> {
   override newNode(nodeKey: NodeKey): SankeyNode {
@@ -17,11 +19,7 @@ export class SankeyGraph extends Graph<SankeyNode, SankeyLink> {
   }
   override addLink(fromKey: NodeKey, toKey: NodeKey, flow?: number): SankeyLink {
     const retLink = super.addLink(fromKey, toKey);
-    if (retLink.flows) {
-      retLink.flows.push(flow);
-    } else {
-      retLink.flows = [flow];
-    }
+    retLink.flow = flow;
     return retLink;
   }
 }
