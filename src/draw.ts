@@ -39,13 +39,13 @@ export function draw(
     const fromKey = Node.key(row[fromFieldName]);
     const toKey = Node.key(row[toFieldName]);
     const flow = row[flowFieldName] || 1;
-    console.log(row + " " + fromKey + "---" + flow + "--->" + toKey);
+    // console.log(row + " " + fromKey + "---" + flow + "--->" + toKey);
     graph.addLink(fromKey, toKey, flow)
 
   });
 
   //------ обработка узлов, расстановка уровней (виртуальных координат) ------
-
+  var currBegin = 0;
   var currLevelX = 0; // текущий уровень узлов по X
   var currLevelY: Array<number> = []; // текущий уровень узлов по Y
   currLevelY[currLevelX] = 0;
@@ -55,7 +55,7 @@ export function draw(
   const rangeY = new Range().add(0);
 
   // параметры отображения
-  const ySpaceBeforeNodes = 10; // вертикальное расстояние в относительных пикселях между узлами одного X-уровня
+  const spaceNodesY = 20; // вертикальное расстояние в относительных пикселях между узлами одного X-уровня
   const scaleX = 200;
   const scaleY = 10;
   const scaleFlow = 10; // относительных пикселов на единицу потока
@@ -71,23 +71,27 @@ export function draw(
 
   function EveryNodeByLevelX(node: SankeyNode) {
     // Тело циклов по последовательной обработке узлов
+    console.log(`--- currLevelX=${currLevelX} currLevelY[currLevelX]=${currLevelY[currLevelX]}`);
     rangeY.add(currLevelY[currLevelX]);
     node.levelX = currLevelX;
     node.levelY = currLevelY[currLevelX];
+
     node.out.forEach(link => nexts.push(graph.asNode(link.to)));
     var outLevelY = node.levelY;
-    node.out.forEach((link,index) => {
+    node.out.forEach((link, index) => {
       var outLink = graph.asLink(link);
-      outLink.fromLevelY=outLevelY;
+      outLink.fromLevelY = outLevelY;
       outLevelY += outLink.flow * scaleFlow;
     });
+
     var inLevelY = node.levelY;
-    node.in.forEach((link,index) => {
+    node.in.forEach((link, index) => {
       var inLink = graph.asLink(link);
-      inLink.toLevelY=inLevelY;
+      inLink.toLevelY = inLevelY;
       inLevelY += inLink.flow * scaleFlow;
     });
-    currLevelY[currLevelX] += node.flow * scaleY + ySpaceBeforeNodes;
+
+    currLevelY[currLevelX] += node.flow * scaleY + spaceNodesY;
   }
 
   // Первый проход по всем узлам
@@ -104,7 +108,7 @@ export function draw(
     if (node.out.length === 0) {
       ends.push(node);
     }
-
+    
   });
 
   while (nexts.length) {
@@ -120,6 +124,19 @@ export function draw(
 
   // У становка для всех конечных узлов максимального X-уровня
   ends.forEach(node => { node.levelX = currLevelX })
+  var sLevelY = 0;
+  for (var i = 0; i <= rangeX.max; i++) {
+    var nh=0;
+    graph.nodes.forEach(node => {
+      if(node.levelX===i){
+        console.log(`=== i:${i} ${node.key} ${node.flow}`);
+        nh+=(nh?spaceNodesY:0)+ node.flow * scaleFlow;
+      }  
+      
+    });
+    console.log(`===+ i:${i} ${nh}`);
+    
+  }
 
   graph.nodes.forEach(n => console.log(`-${n.key} X=${n.levelX} Y=${n.levelY}`));
   var currLevelY2: Array<Range> = []; // текущий уровень узлов по Y
