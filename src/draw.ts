@@ -181,22 +181,23 @@ export function draw(
   root.appendChild(svg);
 
   graph.links.forEach(link => {
-    svg.appendChild(se._flow(
+    svg.appendChild(se._link(
       nodeWidth + link.from.levelX * scaleX,
       link.fromLevelY,
       link.to.levelX * scaleX,
       link.toLevelY,
       link.flow * scaleFlow,
-      `link-${link.key}`,
+      `${link.key}`,
     ));
   });
   graph.nodes.forEach(node => {
-    svg.appendChild(se._rect({
-      x: node.levelX * scaleX,
-      y: node.levelY,
-      width: nodeWidth,
-      height: node.flow * scaleFlow,
-    }));
+    svg.appendChild(se._node(
+      node.levelX * scaleX,
+      node.levelY,
+      nodeWidth,
+      node.flow * scaleFlow,
+      `${node.key}`
+    ));
   });
 
 

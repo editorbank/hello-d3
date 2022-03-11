@@ -17,7 +17,7 @@ export function _rect(p: object): SVGRectElement {
 export function _svg(p: object): SVGElement {
     return _SVGE('svg', p);
 }
-export function _flow(x1:number, y1:number, x2:number, y2:number, w:number, id:string): SVGPathElement {
+export function _link(x1: number, y1: number, x2: number, y2: number, w: number, id: string): SVGPathElement {
     const FX = x1;
     const FY = y1;
     const tx = (x2 - x1);
@@ -25,7 +25,7 @@ export function _flow(x1:number, y1:number, x2:number, y2:number, w:number, id:s
     const mx = (tx) / 2;
     const ww = ty * w * .0015;
 
-    var flow = _SVGE('path', {
+    var element = _SVGE('path', {
         d: `M ${FX},${FY}`
             + ` c ${mx + ww},${0}`
             + ` ${mx + ww},${ty}`
@@ -38,9 +38,32 @@ export function _flow(x1:number, y1:number, x2:number, y2:number, w:number, id:s
         stroke: '',
         id: id,
     });
-    // flow.addEventListener('click', (e:PointerEvent)=>console.log(e));
-    flow.addEventListener('mouseover', (e:any)=>console.log(`onmouseover ${e.path[0].id} on ${e.offsetX}x${e.offsetY}`));
-    // flow.addEventListener('mouseout', (e:any)=>console.log(`onmouseout ${e.path[0].id} off`));
-    return flow;
+    // element.addEventListener('click', (e:PointerEvent)=>console.log(e));
+    element.addEventListener('mouseover', (e: any) => title_on(titleType.link, e.path[0].id, e.offsetX, e.offsetY));
+    element.addEventListener('mouseout', (e: any) => title_off(titleType.link, e.path[0].id));
+    return element;
 }
 
+export function _node(x: number, y: number, width: number, height: number, id: string): SVGRectElement {
+    var element = _rect({
+        x: x,
+        y: y,
+        width: width,
+        height: height,
+        id: id,
+    });
+    // element.addEventListener('click', (e:PointerEvent)=>console.log(e));
+    element.addEventListener('mouseover', (e: any) => title_on(titleType.node, e.path[0].id, e.offsetX, e.offsetY));
+    element.addEventListener('mouseout', (e: any) => title_off(titleType.node, e.path[0].id));
+    return element;
+}
+export enum titleType {
+    node = 1,
+    link = 2,
+}
+function title_on(t: titleType, id: string, x: number, y: number) {
+    console.log(`title ON for ${titleType[t]} "${id}" at ${x}x${y}`)
+}
+function title_off(t: titleType, id: string) {
+    console.log(`title OFF for ${titleType[t]} "${id}"`)
+}
