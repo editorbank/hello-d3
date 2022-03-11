@@ -47,8 +47,6 @@ export function draw(
   //------ обработка узлов, расстановка уровней (виртуальных координат) ------
   var currBegin = 0;
   var currLevelX = 0; // текущий уровень узлов по X
-  var currLevelY: Array<number> = []; // текущий уровень узлов по Y
-  currLevelY[currLevelX] = 0;
   const starts = new Array<SankeyNode>(); // Стартовые узлы
   const ends = new Array<SankeyNode>(); // конечные узлы
   var nexts = new Array<SankeyNode>(); // узлы для дальнейшей обработки
@@ -69,91 +67,91 @@ export function draw(
     return Math.max(oFlow, iFlow);
   }
 
-  function EveryNodeByLevelX(node: SankeyNode) {
-    // Тело циклов по последовательной обработке узлов
-    console.log(`--- currLevelX=${currLevelX} currLevelY[currLevelX]=${currLevelY[currLevelX]}`);
-    rangeY.add(currLevelY[currLevelX]);
-    node.levelX = currLevelX;
-    node.levelY = currLevelY[currLevelX];
-
-    node.out.forEach(link => nexts.push(graph.asNode(link.to)));
-    var outLevelY = node.levelY;
-    node.out.forEach((link, index) => {
-      var outLink = graph.asLink(link);
-      outLink.fromLevelY = outLevelY;
-      outLevelY += outLink.flow * scaleFlow;
-    });
-
-    var inLevelY = node.levelY;
-    node.in.forEach((link, index) => {
-      var inLink = graph.asLink(link);
-      inLink.toLevelY = inLevelY;
-      inLevelY += inLink.flow * scaleFlow;
-    });
-
-    currLevelY[currLevelX] += node.flow * scaleY + spaceNodesY;
-  }
-
-  // Первый проход по всем узлам
+  // Первый проход по всем узлам расстановка уровня по оси X
   graph.nodes.forEach(node => {
-    node.flow = getNodeFlow(node);
+    node.flow = getNodeFlow(node); // вычисление высоты узлов
 
-    // отбор начальных узлов
+    // отбор начальных узлов в отдельную колекцию
     if (node.in.length === 0) {
       starts.push(node);
-      EveryNodeByLevelX(node);
+      node.levelX = currLevelX;
+      node.out.forEach(link => nexts.push(graph.asNode(link.to)));
     }
 
     // Отбор конечных узлов
     if (node.out.length === 0) {
       ends.push(node);
     }
-    
+
   });
 
   while (nexts.length) {
     const current = nexts; // узлы для обработки в этом цикле
     nexts = new Array<SankeyNode>(); // узлы для обработки в следущем цикле
     currLevelX++;
-    currLevelY[currLevelX] = 0;
+    // currLevelY[currLevelX] = 0;
     current.forEach(node => {
-      EveryNodeByLevelX(node);
+      node.levelX = currLevelX;
+      node.out.forEach(link => nexts.push(graph.asNode(link.to)));
+
+      //EveryNodeByLevelX(node,currLevelX);
     })
   };
   const rangeX = new Range().add(0).add(currLevelX);
 
   // У становка для всех конечных узлов максимального X-уровня
   ends.forEach(node => { node.levelX = currLevelX })
-  var sLevelY = 0;
-  for (var i = 0; i <= rangeX.max; i++) {
-    var nh=0;
+
+  var currLevelY: Array<number> = []; // текущий уровень узлов по Y
+
+  for (var currLevelX = rangeX.min as number; currLevelX <= rangeX.max; currLevelX++) {
+    currLevelY[currLevelX] = 0;
+    // currLevelY[currLevelX] = currLevelX === rangeX.min || currLevelX === rangeX.max ? 0 : currLevelY[currLevelX-1];
+    currLevelY[currLevelX] = currLevelX === rangeX.min || currLevelX === rangeX.max ? 0 : currLevelY[currLevelX-1]/2;
+    // currLevelY[currLevelX] = currLevelX === rangeX.min || currLevelX === rangeX.max ? 0 : nh;
+    var nh = 0;
     graph.nodes.forEach(node => {
-      if(node.levelX===i){
-        console.log(`=== i:${i} ${node.key} ${node.flow}`);
-        nh+=(nh?spaceNodesY:0)+ node.flow * scaleFlow;
-      }  
-      
+      if (node.levelX === currLevelX) {
+        // EveryNodeByLevelX(node,currLevelX)
+        // console.log(`--- currLevelX=${currLevelX} currLevelY[currLevelX]=${currLevelY[currLevelX]}`);
+        rangeY.add(currLevelY[currLevelX]);
+        // node.levelX = currLevelX;
+        node.levelY = currLevelY[currLevelX] || graph.asLink(node.in).toLevelY || 0;
+
+        // node.out.forEach(link => nexts.push(graph.asNode(link.to)));
+        var outLevelY = node.levelY;
+        node.out.forEach((link, index) => {
+          var outLink = graph.asLink(link);
+          outLink.fromLevelY = outLevelY;
+          outLevelY += outLink.flow * scaleFlow;
+        });
+
+        var inLevelY = node.levelY;
+        node.in.forEach((link, index) => {
+          var inLink = graph.asLink(link);
+          inLink.toLevelY = inLevelY;
+          inLevelY += inLink.flow * scaleFlow;
+        });
+
+        currLevelY[currLevelX] += node.flow * scaleY + spaceNodesY;
+
+        // console.log(`--- currLevelX:${currLevelX} ${node.key} ${node.flow}`);
+        nh += (nh ? spaceNodesY : 0) + node.flow * scaleFlow;
+      }
     });
-    console.log(`===+ i:${i} ${nh}`);
-    
+    // console.log(`===+ currLevelX:${currLevelX} ${nh}`);
   }
 
-  graph.nodes.forEach(n => console.log(`-${n.key} X=${n.levelX} Y=${n.levelY}`));
-  var currLevelY2: Array<Range> = []; // текущий уровень узлов по Y
+  // graph.nodes.forEach(n => console.log(`-${n.key} X=${n.levelX} Y=${n.levelY}`));
 
-  graph.nodes.forEach(n => {
-    if (!currLevelY2[n.levelX]) currLevelY2[n.levelX] = new Range();
-    currLevelY2[n.levelX].add(n.levelY)
-  });
 
-  console.log((currLevelY2));
-  console.log((graph.nodes));
+  // console.log((graph.nodes));
   // console.log((graph.links));
   // console.log((graph.flows));
-  console.log((`rangeX=${rangeX} rangeY=${rangeY}`));
-  console.log((`currLevelY=${currLevelY} `));
+  // console.log((`rangeX=${rangeX} rangeY=${rangeY}`));
+  // console.log((`currLevelY=${currLevelY} `));
 
-  console.log(root.clientWidth);
+  // console.log(root.clientWidth);
 
   //------ Отрисовка диаграммы ------
 
