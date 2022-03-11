@@ -38,7 +38,7 @@ export function _link(x1: number, y1: number, x2: number, y2: number, w: number,
         stroke: '',
         id: id,
     });
-    // element.addEventListener('click', (e:PointerEvent)=>console.log(e));
+    element.addEventListener('click', (e: any) => click(titleType.link, e.path[0].id, e.offsetX, e.offsetY));
     element.addEventListener('mouseover', (e: any) => title_on(titleType.link, e.path[0].id, e.offsetX, e.offsetY));
     element.addEventListener('mouseout', (e: any) => title_off(titleType.link, e.path[0].id));
     return element;
@@ -52,7 +52,7 @@ export function _node(x: number, y: number, width: number, height: number, id: s
         height: height,
         id: id,
     });
-    // element.addEventListener('click', (e:PointerEvent)=>console.log(e));
+    element.addEventListener('click', (e: any) => click(titleType.node, e.path[0].id, e.offsetX, e.offsetY));
     element.addEventListener('mouseover', (e: any) => title_on(titleType.node, e.path[0].id, e.offsetX, e.offsetY));
     element.addEventListener('mouseout', (e: any) => title_off(titleType.node, e.path[0].id));
     return element;
@@ -66,4 +66,8 @@ function title_on(t: titleType, id: string, x: number, y: number) {
 }
 function title_off(t: titleType, id: string) {
     console.log(`title OFF for ${titleType[t]} "${id}"`)
+}
+
+function click(t: titleType, id: string, x: number, y: number) {
+    console.log(`click for ${titleType[t]} "${id}" at ${x}x${y}`)
 }
