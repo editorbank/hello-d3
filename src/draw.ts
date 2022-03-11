@@ -53,10 +53,9 @@ export function draw(
   const rangeY = new Range().add(0);
 
   // параметры отображения
-  const spaceNodesY = 20; // вертикальное расстояние в относительных пикселях между узлами одного X-уровня
+  const spaceNodesY = 50; // вертикальное расстояние в относительных пикселях между узлами одного X-уровня
   const scaleX = 200;
-  const scaleY = 10;
-  const scaleFlow = 10; // относительных пикселов на единицу потока
+  const scaleFlow = 20; // относительных пикселов на единицу потока
   var nodeWidth = 20; // ширина узла относительных пикселов 
 
 
@@ -102,21 +101,53 @@ export function draw(
   // У становка для всех конечных узлов максимального X-уровня
   ends.forEach(node => { node.levelX = currLevelX })
 
+  const ascend = (a: any, b: any) => (a > b) ? 1 : (a < b) ? -1 : 0;
+  // console.log([3, 1, 2, 4, 0].sort(ascend));
+
+  //*
+  graph.nodes.forEach(node => {
+    // сортировка входящих потоков сначало самые дальние (меньшие по LevelX) и самые толстые
+    node.in = node.in.sort((a, b) => {
+      const x = (x: any) => graph.asLink(x).from.levelX;
+      const w = (x: any) => graph.asLink(x).flow;
+      return - ascend(w(a), w(b)) || ascend(x(a), x(b));
+      // return ascend(x(a), x(b)) || - ascend(w(a), w(b));
+    });
+    // сортировка исходящих потоков сначало самые дальние (большие по LevelX) и самые толстые
+    node.out = node.out.sort((a, b) => {
+      const x = (x: any) => graph.asLink(x).to.levelX;
+      const w = (x: any) => graph.asLink(x).flow;
+      return - ascend(w(a), w(b)) || - ascend(x(a), x(b));
+      // return - ascend(x(a), x(b)) || - ascend(w(a), w(b));
+    });
+  });
+  //*/
+
+
+
   var currLevelY: Array<number> = []; // текущий уровень узлов по Y
 
   for (var currLevelX = rangeX.min as number; currLevelX <= rangeX.max; currLevelX++) {
-    currLevelY[currLevelX] = 0;
-    // currLevelY[currLevelX] = currLevelX === rangeX.min || currLevelX === rangeX.max ? 0 : currLevelY[currLevelX-1];
-    currLevelY[currLevelX] = currLevelX === rangeX.min || currLevelX === rangeX.max ? 0 : currLevelY[currLevelX-1]/2;
-    // currLevelY[currLevelX] = currLevelX === rangeX.min || currLevelX === rangeX.max ? 0 : nh;
-    var nh = 0;
     graph.nodes.forEach(node => {
       if (node.levelX === currLevelX) {
-        // EveryNodeByLevelX(node,currLevelX)
-        // console.log(`--- currLevelX=${currLevelX} currLevelY[currLevelX]=${currLevelY[currLevelX]}`);
         rangeY.add(currLevelY[currLevelX]);
-        // node.levelX = currLevelX;
-        node.levelY = currLevelY[currLevelX] || graph.asLink(node.in).toLevelY || 0;
+
+        if(!(currLevelX === rangeX.max)){
+          var prevNodeLevelY:number = undefined;
+          node.in.forEach((link, index) => {
+            var inLink = graph.asLink(link);
+            if(!prevNodeLevelY || inLink.fromLevelY < prevNodeLevelY) prevNodeLevelY = inLink.fromLevelY;
+          });
+        }
+        currLevelY[currLevelX] = currLevelY[currLevelX] || prevNodeLevelY + spaceNodesY || 0;
+        node.levelY = currLevelY[currLevelX];
+
+        var inLevelY = node.levelY;
+        node.in.forEach((link, index) => {
+          var inLink = graph.asLink(link);
+          inLink.toLevelY = inLevelY;
+          inLevelY += inLink.flow * scaleFlow;
+        });
 
         // node.out.forEach(link => nexts.push(graph.asNode(link.to)));
         var outLevelY = node.levelY;
@@ -126,17 +157,8 @@ export function draw(
           outLevelY += outLink.flow * scaleFlow;
         });
 
-        var inLevelY = node.levelY;
-        node.in.forEach((link, index) => {
-          var inLink = graph.asLink(link);
-          inLink.toLevelY = inLevelY;
-          inLevelY += inLink.flow * scaleFlow;
-        });
 
-        currLevelY[currLevelX] += node.flow * scaleY + spaceNodesY;
-
-        // console.log(`--- currLevelX:${currLevelX} ${node.key} ${node.flow}`);
-        nh += (nh ? spaceNodesY : 0) + node.flow * scaleFlow;
+        currLevelY[currLevelX] += node.flow * scaleFlow + spaceNodesY;
       }
     });
     // console.log(`===+ currLevelX:${currLevelX} ${nh}`);
@@ -148,8 +170,8 @@ export function draw(
   // console.log((graph.nodes));
   // console.log((graph.links));
   // console.log((graph.flows));
-  // console.log((`rangeX=${rangeX} rangeY=${rangeY}`));
-  // console.log((`currLevelY=${currLevelY} `));
+  console.log((`rangeX=${rangeX} rangeY=${rangeY}`));
+  console.log((`currLevelY=${currLevelY} `));
 
   // console.log(root.clientWidth);
 
