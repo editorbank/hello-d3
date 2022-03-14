@@ -3,11 +3,9 @@ import {
   SankeyGraph,
   SankeyNode,
   SankeyLink,
+  newSankeyGraph,
+  setLevelX,
 } from './SankeyGraph';
-import {
-  Node,
-  NodeKey,
-} from './Graph';
 
 import "./in_data";
 import * as d3 from "d3";
@@ -15,154 +13,161 @@ import * as se from "./SVGE";
 
 import { SamplePolymaticaWidget } from "./in_data";
 
-function getDataColumNameByBlock(wiget: SamplePolymaticaWidget, blockName: string, blockCol = 0): string {
-  if (!blockCol && blockCol !== 0) blockCol = 0
-  return wiget.dataSettings.columnsByBlock[blockName][blockCol].path;
-}
-function getDataValue(wiget: SamplePolymaticaWidget, rowIndex: number, blockName: string, blockCol = 0): any {
-  return wiget.data[rowIndex][getDataColumNameByBlock(wiget, blockName, blockCol)]
-}
-
-
 export function draw(
   root: HTMLElement,
   wiget: SamplePolymaticaWidget,
 ) {
 
-  //------ заполнение графа внешними данными ------
-
-  const fromFieldName = getDataColumNameByBlock(wiget, 'FROM')
-  const toFieldName = getDataColumNameByBlock(wiget, 'TO')
-  const flowFieldName = getDataColumNameByBlock(wiget, 'FLOW')
-  const graph = new SankeyGraph();
-  wiget.data.forEach((row) => {
-    const fromKey = Node.key(row[fromFieldName]);
-    const toKey = Node.key(row[toFieldName]);
-    const flow = row[flowFieldName] || 1;
-    // console.log(row + " " + fromKey + "---" + flow + "--->" + toKey);
-    graph.addLink(fromKey, toKey, flow)
-
-  });
-
-  //------ обработка узлов, расстановка уровней (виртуальных координат) ------
-  var currBegin = 0;
-  var currLevelX = 0; // текущий уровень узлов по X
-  const starts = new Array<SankeyNode>(); // Стартовые узлы
-  const ends = new Array<SankeyNode>(); // конечные узлы
-  var nexts = new Array<SankeyNode>(); // узлы для дальнейшей обработки
-  const rangeY = new Range().add(0);
-
   // параметры отображения
-  const spaceNodesY = 50; // вертикальное расстояние в относительных пикселях между узлами одного X-уровня
-  const scaleX = 200;
-  const scaleFlow = 20; // относительных пикселов на единицу потока
-  var nodeWidth = 20; // ширина узла относительных пикселов 
+  const scaleY = 29.9
+  ; // относительных пикселов на единицу потока
+  const scaleX = 203;
 
+  const nodeWidth = (30); // ширина узла относительных пикселов 
+  const spaceNodesY = (30); // вертикальное расстояние в относительных пикселях между узлами одного X-уровня
 
-  function getNodeFlow(node: SankeyNode): number {
-    // Максимальная сумма величин входящих или исходящих потоков
-    var oFlow = node.out.reduce((prev, link) => (prev += graph.asLink(link).flow), 0);
-    var iFlow = node.in.reduce((prev, link) => (prev += graph.asLink(link).flow), 0);
-    return Math.max(oFlow, iFlow);
-  }
+  // создание графа и заполнение его внешними данными
+  const graph = newSankeyGraph(wiget);
 
-  // Первый проход по всем узлам расстановка уровня по оси X
-  graph.nodes.forEach(node => {
-    node.flow = getNodeFlow(node); // вычисление высоты узлов
+  // сортировка всех связей по уменьшению величины потока (чтоб  сначала рисовались тостые потоки, затем тонкие)
+  graph.links.sort((a, b) => {
+    const w = (x: any) => graph.asLink(x).flow;
+    return - ascend(w(a), w(b));
+  })
 
-    // отбор начальных узлов в отдельную колекцию
-    if (node.in.length === 0) {
-      starts.push(node);
-      node.levelX = currLevelX;
-      node.out.forEach(link => nexts.push(graph.asNode(link.to)));
-    }
+  // расстановка всех узлов виртуальных координат по оси X и величины потока.
+  setLevelX(graph);
 
-    // Отбор конечных узлов
-    if (node.out.length === 0) {
-      ends.push(node);
-    }
-
+  // создание массива узлов и сортировка его по увеличению Уровня X далее по уменьшению величины потока
+  const nodes: SankeyNode[] = [];
+  graph.nodes.forEach(node => nodes.push(node));
+  nodes.sort((a, b) => {
+    const x = (x: any) => graph.asNode(x).levelX;
+    const w = (x: any) => graph.asNode(x).flow;
+    return ascend(x(a), x(b)) || - ascend(w(a), w(b));
   });
 
-  while (nexts.length) {
-    const current = nexts; // узлы для обработки в этом цикле
-    nexts = new Array<SankeyNode>(); // узлы для обработки в следущем цикле
-    currLevelX++;
-    // currLevelY[currLevelX] = 0;
-    current.forEach(node => {
-      node.levelX = currLevelX;
-      node.out.forEach(link => nexts.push(graph.asNode(link.to)));
+  // массив массивов узлов по уровню X
+  var nodesByLevelX = Array<Array<SankeyNode>>();
+  nodes.forEach(node => {
+    if (nodesByLevelX[node.levelX]) nodesByLevelX[node.levelX].push(node); else nodesByLevelX[node.levelX] = [node];
+  });
 
-      //EveryNodeByLevelX(node,currLevelX);
-    })
-  };
-  const rangeX = new Range().add(0).add(currLevelX);
+  console.log(nodesByLevelX);
 
-  // У становка для всех конечных узлов максимального X-уровня
-  ends.forEach(node => { node.levelX = currLevelX })
-
-  const ascend = (a: any, b: any) => (a > b) ? 1 : (a < b) ? -1 : 0;
+  function ascend(a: any, b: any): -1 | 0 | 1 { return (a > b) ? 1 : (a < b) ? -1 : 0; }
   // console.log([3, 1, 2, 4, 0].sort(ascend));
 
-  //*
-  graph.nodes.forEach(node => {
-    // сортировка входящих потоков сначало самые дальние (меньшие по LevelX) и самые толстые
-    node.in = node.in.sort((a, b) => {
-      const x = (x: any) => graph.asLink(x).from.levelX;
-      const w = (x: any) => graph.asLink(x).flow;
-      return - ascend(w(a), w(b)) || ascend(x(a), x(b));
-      // return ascend(x(a), x(b)) || - ascend(w(a), w(b));
+
+  var currLevelY: Array<number> = []; // текущий уровень узлов по оси Y свой для каждого X
+
+  { // Установка levelY только для начальных узлов
+    let currLevelX = 0;
+    nodesByLevelX[currLevelX].forEach(node => {
+
+      currLevelY[currLevelX] = currLevelY[currLevelX] || 0;
+      node.levelY = currLevelY[currLevelX];
+      currLevelY[currLevelX] += node.flow * scaleY + spaceNodesY;
+
+      var outLevelY = node.levelY;
+      node.out.sort((a, b) => {
+        const y = (x: any) => graph.asLink(x).from.levelY;
+        const w = (x: any) => graph.asLink(x).flow;
+        return ascend(y(a), y(b)) || -ascend(w(a), w(b));
+      }).forEach((link) => {
+        var outLink = graph.asLink(link);
+        outLink.fromLevelY = outLevelY;
+        outLevelY += outLink.flow * scaleY;
+      });
+
     });
-    // сортировка исходящих потоков сначало самые дальние (большие по LevelX) и самые толстые
-    node.out = node.out.sort((a, b) => {
-      const x = (x: any) => graph.asLink(x).to.levelX;
-      const w = (x: any) => graph.asLink(x).flow;
-      return - ascend(w(a), w(b)) || - ascend(x(a), x(b));
-      // return - ascend(x(a), x(b)) || - ascend(w(a), w(b));
-    });
-  });
-  //*/
-
-
-
-  var currLevelY: Array<number> = []; // текущий уровень узлов по Y
-
-  for (var currLevelX = rangeX.min as number; currLevelX <= rangeX.max; currLevelX++) {
-    graph.nodes.forEach(node => {
-      if (node.levelX === currLevelX) {
-        rangeY.add(currLevelY[currLevelX]);
-
-        if(!(currLevelX === rangeX.max)){
-          var prevNodeLevelY:number = undefined;
-          node.in.forEach((link, index) => {
-            var inLink = graph.asLink(link);
-            if(!prevNodeLevelY || inLink.fromLevelY < prevNodeLevelY) prevNodeLevelY = inLink.fromLevelY;
-          });
-        }
-        currLevelY[currLevelX] = currLevelY[currLevelX] || prevNodeLevelY + spaceNodesY || 0;
-        node.levelY = currLevelY[currLevelX];
-
-        var inLevelY = node.levelY;
-        node.in.forEach((link, index) => {
-          var inLink = graph.asLink(link);
-          inLink.toLevelY = inLevelY;
-          inLevelY += inLink.flow * scaleFlow;
-        });
-
-        // node.out.forEach(link => nexts.push(graph.asNode(link.to)));
-        var outLevelY = node.levelY;
-        node.out.forEach((link, index) => {
-          var outLink = graph.asLink(link);
-          outLink.fromLevelY = outLevelY;
-          outLevelY += outLink.flow * scaleFlow;
-        });
-
-
-        currLevelY[currLevelX] += node.flow * scaleFlow + spaceNodesY;
-      }
-    });
-    // console.log(`===+ currLevelX:${currLevelX} ${nh}`);
   }
+
+
+  // только для средних узлов
+  if (nodesByLevelX.length > 2) for (var currLevelX = 1; currLevelX < nodesByLevelX.length; currLevelX++) {
+    nodesByLevelX[currLevelX].forEach(node => {
+
+      let prevNodeLevelY: number;
+      node.in.forEach((link) => {
+        var inLink = graph.asLink(link);
+        if (!prevNodeLevelY || inLink.fromLevelY < prevNodeLevelY) prevNodeLevelY = inLink.fromLevelY;
+      });
+
+      currLevelY[currLevelX] = currLevelY[currLevelX] || prevNodeLevelY /*+ spaceNodesY*/ || 0;
+      node.levelY = currLevelY[currLevelX];
+      currLevelY[currLevelX] += node.flow * scaleY + spaceNodesY;
+
+      let inLevelY = node.levelY;
+      node.in.sort((a, b) => {
+        const y = (x: any) => graph.asLink(x).from.levelY;
+        const w = (x: any) => graph.asLink(x).flow;
+        return ascend(y(a), y(b)) || - ascend(w(a), w(b));
+      }).forEach((link) => {
+        var inLink = graph.asLink(link);
+        inLink.toLevelY = inLevelY;
+        inLevelY += inLink.flow * scaleY;
+      });
+
+    });
+  }
+//*
+  if (nodesByLevelX.length >= 1) { // Установка levelY только для конечных узлов
+    let currLevelX = nodesByLevelX.length - 1;
+    currLevelY[currLevelX] = 0;
+    nodesByLevelX[currLevelX].forEach(node => {
+
+      // currLevelY[currLevelX] = currLevelY[currLevelX] || 0;
+      node.levelY = currLevelY[currLevelX];
+      currLevelY[currLevelX] += node.flow * scaleY + spaceNodesY;
+
+      var inLevelY = node.levelY;
+      node.in.sort((a, b) => {
+        const y = (x: any) => graph.asLink(x).from.levelY;
+        const w = (x: any) => graph.asLink(x).flow;
+        return ascend(y(a), y(b)) || -ascend(w(a), w(b));
+      }).forEach((link) => {
+        var inLink = graph.asLink(link);
+        inLink.toLevelY = inLevelY;
+        inLevelY += inLink.flow * scaleY;
+      });
+
+
+    });
+  }
+//*/
+//*
+
+  for (var currLevelX = 0; currLevelX < nodesByLevelX.length; currLevelX++) {
+    nodesByLevelX[currLevelX].forEach(node => {
+
+      let outLevelY = node.levelY;
+      node.out.sort((a, b) => {
+        const y = (x: any) => graph.asLink(x).to.levelY;
+        const x = (x: any) => graph.asLink(x).to.levelX;
+        const w = (x: any) => graph.asLink(x).flow;
+        return ascend(y(a), y(b)) || ascend(x(a), x(b)) || -ascend(w(a), w(b));
+      }).forEach((link) => {
+        var outLink = graph.asLink(link);
+        outLink.fromLevelY = outLevelY;
+        outLevelY += outLink.flow * scaleY;
+      });
+
+      let inLevelY = node.levelY;
+      node.in.sort((a, b) => {
+        const y = (x: any) => graph.asLink(x).from.levelY;
+        const x = (x: any) => graph.asLink(x).from.levelX;
+        const w = (x: any) => graph.asLink(x).flow;
+        return ascend(y(a), y(b)) || -ascend(x(a), x(b)) || -ascend(w(a), w(b));
+      }).forEach((link) => {
+        var inLink = graph.asLink(link);
+        inLink.toLevelY = inLevelY;
+        inLevelY += inLink.flow * scaleY;
+      });
+
+    });
+  }
+//*/
 
   // graph.nodes.forEach(n => console.log(`-${n.key} X=${n.levelX} Y=${n.levelY}`));
 
@@ -170,7 +175,6 @@ export function draw(
   // console.log((graph.nodes));
   // console.log((graph.links));
   // console.log((graph.flows));
-  console.log((`rangeX=${rangeX} rangeY=${rangeY}`));
   console.log((`currLevelY=${currLevelY} `));
 
   // console.log(root.clientWidth);
@@ -186,7 +190,7 @@ export function draw(
       link.fromLevelY,
       link.to.levelX * scaleX,
       link.toLevelY,
-      link.flow * scaleFlow,
+      link.flow * scaleY,
       `${link.key}`,
     ));
   });
@@ -195,7 +199,7 @@ export function draw(
       node.levelX * scaleX,
       node.levelY,
       nodeWidth,
-      node.flow * scaleFlow,
+      node.flow * scaleY,
       `${node.key}`
     ));
   });
