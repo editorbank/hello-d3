@@ -8,6 +8,7 @@ export class SankeyNode extends Node {
   levelX: number;
   levelY: number;
   flow: number;
+  color: string;
 }
 
 export class SankeyLink extends Link<SankeyNode> {
@@ -52,8 +53,8 @@ export function loadFromWiget(graph: SankeyGraph, wiget: SamplePolymaticaWidget)
 }
 
 //------ обработка узлов, расстановка уровней (виртуальных координат) ------
-export function setLevelX(graph: SankeyGraph): void {
-  
+export function setLevelX(graph: SankeyGraph, wiget: SamplePolymaticaWidget): void {
+
   var currLevelX = 0; // текущий уровень узлов по X
   graph.rangeX.add(currLevelX);
 
@@ -67,8 +68,13 @@ export function setLevelX(graph: SankeyGraph): void {
   // Первый проход по всем узлам
   var ends = new Array<SankeyNode>(); // конечные узлы
   var nexts = new Array<SankeyNode>(); // узлы для дальнейшей обработки
+  const colorer = new Colorer(wiget);
+
   graph.nodes.forEach(node => {
     node.flow = getNodeFlow(node); // вычисление высоты для всех узлов
+    node.color = colorer.next();
+
+
 
     if (node.in.length === 0) {
       // Установка уровня по оси X для стартовых узлов
@@ -98,7 +104,7 @@ export function setLevelX(graph: SankeyGraph): void {
   graph.rangeX.add(currLevelX);
 }
 
-export function setLevelY(graph: SankeyGraph, spaceNodesY:number): void {
+export function setLevelY(graph: SankeyGraph, spaceNodesY: number): void {
   // сортировка всех связей по уменьшению величины потока (чтоб  сначала рисовались тостые потоки, затем тонкие)
   graph.links.sort((a, b) => {
     const w = (x: any) => graph.asLink(x).flow;
@@ -146,13 +152,13 @@ export function setLevelY(graph: SankeyGraph, spaceNodesY:number): void {
         outLevelY += outLink.flow;
       });
 
-      graph.rangeY.add(node.levelY+node.flow);
+      graph.rangeY.add(node.levelY + node.flow);
     });
   }
 
 
   // только для средних узлов
-  if (nodesByLevelX.length > 2) for (var currLevelX = 1; currLevelX < nodesByLevelX.length-1; currLevelX++) {
+  if (nodesByLevelX.length > 2) for (var currLevelX = 1; currLevelX < nodesByLevelX.length - 1; currLevelX++) {
     nodesByLevelX[currLevelX].forEach(node => {
 
       let prevNodeLevelY: number;
@@ -176,7 +182,7 @@ export function setLevelY(graph: SankeyGraph, spaceNodesY:number): void {
       //   inLevelY += inLink.flow;
       // });
 
-      graph.rangeY.add(node.levelY+node.flow);
+      graph.rangeY.add(node.levelY + node.flow);
     });
   }
   //*
@@ -200,7 +206,7 @@ export function setLevelY(graph: SankeyGraph, spaceNodesY:number): void {
       //   inLevelY += inLink.flow;
       // });
 
-      graph.rangeY.add(node.levelY+node.flow);
+      graph.rangeY.add(node.levelY + node.flow);
     });
   }
   //*/
@@ -238,13 +244,26 @@ export function setLevelY(graph: SankeyGraph, spaceNodesY:number): void {
 }
 
 //------ Отрисовка диаграммы ------
-export function drawGraph(graph: SankeyGraph, root: HTMLElement, nodeWidth: number):void{
+export function drawGraph(graph: SankeyGraph, root: HTMLElement, wiget: SamplePolymaticaWidget, nodeWidth: number): void {
+  const rootHeight = root.clientHeight;
+  const rootWidth = root.clientWidth;
+  // console.log({ height: rootHeight, width: rootWidth });
+  const scaleY = (rootHeight) / graph.rangeY.max; // относительных пикселов на единицу потока
+  const scaleX = (rootWidth - nodeWidth) / (graph.rangeX.max);
+  var colorFlow: 'from' | 'to' | 'gradient' = 'gradient';
 
-  const scaleY = (root.clientHeight)/graph.rangeY.max; // относительных пикселов на единицу потока
-  const scaleX = (root.clientWidth - nodeWidth)/(graph.rangeX.max);
+  const svg = se._svg({ height: rootHeight, width: rootWidth })
+  root.replaceChildren(svg);
 
-  var svg = se._svg({ height: root.clientHeight, width: root.clientWidth })
-  root.appendChild(svg);
+  var defs = se._SVGE('defs');
+  graph.links.forEach(link => {
+    defs.appendChild(se._linearGradient(
+      `link_color_${link.key}`,
+      colorFlow === 'to' ? link.to.color : link.from.color,
+      colorFlow === 'from' ? link.from.color : link.to.color
+    ));
+  });
+  svg.appendChild(defs);
 
   graph.links.forEach(link => {
     svg.appendChild(se._link(
@@ -253,6 +272,7 @@ export function drawGraph(graph: SankeyGraph, root: HTMLElement, nodeWidth: numb
       link.to.levelX * scaleX,
       link.toLevelY * scaleY,
       link.flow * scaleY,
+      `url(#link_color_${link.key})`,
       `${link.key}`,
     ));
   });
@@ -262,8 +282,20 @@ export function drawGraph(graph: SankeyGraph, root: HTMLElement, nodeWidth: numb
       node.levelY * scaleY,
       nodeWidth,
       node.flow * scaleY,
+      node.color,
       `${node.key}`
     ));
   });
-
 }
+
+class Colorer {
+  widget: SamplePolymaticaWidget;
+  count = 0;
+  next(): string {
+    return this.widget.theme.colorize[(this.count++) % this.widget.theme.colorize.length][3];
+  }
+  constructor(widget: SamplePolymaticaWidget) {
+    this.widget = widget;
+  }
+}
+

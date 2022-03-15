@@ -1,4 +1,4 @@
-export function _SVGE(tag: string, params: any): any {
+export function _SVGE(tag: string, params: any = {}): any {
     var element = document.createElementNS("http://www.w3.org/2000/svg", tag);
     for (var i in params) element.setAttributeNS(null, i, ''.concat(params[i]))
     return element;
@@ -17,7 +17,7 @@ export function _rect(p: object): SVGRectElement {
 export function _svg(p: object): SVGElement {
     return _SVGE('svg', p);
 }
-export function _link(x1: number, y1: number, x2: number, y2: number, w: number, id: string): SVGPathElement {
+export function _link(x1: number, y1: number, x2: number, y2: number, w: number, color: string, id: string): SVGPathElement {
     const FX = x1;
     const FY = y1;
     const tx = (x2 - x1);
@@ -36,6 +36,7 @@ export function _link(x1: number, y1: number, x2: number, y2: number, w: number,
             + ` ${-tx},${-ty}`
             + ` Z`,
         stroke: '',
+        fill: color,
         id: id,
     });
     element.addEventListener('click', (e: any) => click(titleType.link, e.path[0].id, e.offsetX, e.offsetY));
@@ -44,13 +45,14 @@ export function _link(x1: number, y1: number, x2: number, y2: number, w: number,
     return element;
 }
 
-export function _node(x: number, y: number, width: number, height: number, id: string): SVGRectElement {
+export function _node(x: number, y: number, width: number, height: number, color: string, id: string): SVGRectElement {
     var element = _rect({
         x: x,
         y: y,
         width: width,
         height: height,
         id: id,
+        fill: color,
     });
     element.addEventListener('click', (e: any) => click(titleType.node, e.path[0].id, e.offsetX, e.offsetY));
     element.addEventListener('mouseover', (e: any) => title_on(titleType.node, e.path[0].id, e.offsetX, e.offsetY));
@@ -70,4 +72,19 @@ function title_off(t: titleType, id: string) {
 
 function click(t: titleType, id: string, x: number, y: number) {
     console.log(`click for ${titleType[t]} "${id}" at ${x}x${y}`)
+}
+
+export function _linearGradient(id: string, colorFrom: string, colorTo: string) {
+    var grad = _SVGE("linearGradient", {
+        id: id
+    });
+    grad.appendChild(_SVGE("stop", {
+        offset: "0%",
+        "stop-color": colorFrom,
+    }));
+    grad.appendChild(_SVGE("stop", {
+        offset: "100%",
+        "stop-color": colorTo,
+    }));
+    return grad;
 }
